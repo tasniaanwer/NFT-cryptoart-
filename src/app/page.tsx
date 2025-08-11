@@ -5,9 +5,12 @@ import { Wallet, Star, Shield, Zap, Users, Trophy, Sparkles } from "lucide-react
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ConnectButton } from "thirdweb/react"
+import { ConnectButton,useReadContract,MediaRenderer,TransactionButton,useActiveAccount} from "thirdweb/react"
 import { createThirdwebClient, getContract } from "thirdweb"
 import { sepolia } from "thirdweb/chains"
+import { getContractMetadata } from "thirdweb/extensions/common";
+import { claimTo } from "thirdweb/extensions/erc721";
+
 
 
 const client = createThirdwebClient({
@@ -22,7 +25,7 @@ export default function NFTLanding() {
     ? getContract({ client, chain: sepolia, address: contractAddress })
     : undefined
 
- 
+ const account =useActiveAccount();
       
   const handleConnectWallet = () => {
     // For demo purposes, just show an alert
@@ -34,7 +37,12 @@ export default function NFTLanding() {
     // For demo purposes, just show an alert
     alert("Please connect your wallet first to claim this NFT!")
   }
-
+const {data : contractMetadata}= useReadContract(
+  getContractMetadata,{
+    contract:contract
+  }
+);
+console.log(contractMetadata)
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
       {/* Navbar */}
@@ -75,15 +83,23 @@ export default function NFTLanding() {
       <section className="max-w-7xl mx-auto px-4 py-12 lg:py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* NFT Image */}
-          <div className="relative">
-            <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-purple-500/20 to-pink-500/20 p-8 backdrop-blur-sm border border-white/10">
-              <Image
-                src="/futuristic-neon-geometric-nft.png"
-                alt="Cosmic Genesis NFT"
-                width={500}
-                height={500}
-                className="w-full h-auto rounded-xl shadow-2xl"
-              />
+           <div className="flex justify-end">
+      <div className="w-[500px] h-[500px] rounded-2xl overflow-hidden bg-gradient-to-br from-purple-500/20 to-pink-500/20 p-1 backdrop-blur-sm border border-white/10">
+        <MediaRenderer
+          client={client}
+          src={contractMetadata?.image}
+          alt="NFT Preview"
+          width="100%"
+          height="100%"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain', // Ensures full image is visible
+            borderRadius: '0.65rem', // Slightly smaller to account for container
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            backgroundColor: 'transparent' // Fallback for transparent images
+          }}
+        />
               <div className="absolute top-4 right-4">
                 <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Available</Badge>
               </div>
@@ -97,14 +113,13 @@ export default function NFTLanding() {
                 Limited Edition
               </Badge>
               <h1 className="text-4xl lg:text-6xl font-bold text-white leading-tight">
-                Cosmic Genesis
+                {contractMetadata?.name}
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
                   #001
                 </span>
               </h1>
               <p className="text-xl text-white/80 leading-relaxed">
-                A unique digital masterpiece that represents the birth of a new universe. This exclusive NFT grants you
-                access to an elite community and exclusive benefits.
+                {contractMetadata?.description}
               </p>
             </div>
 
@@ -128,6 +143,15 @@ export default function NFTLanding() {
                 <Zap className="mr-2 h-5 w-5" />
                 Claim NFT
               </Button>
+              <TransactionButton
+              transaction={()=>claimTo({
+                contract: contract,
+                to: account?.address as string,
+                quantity:BigInt(1),
+              })}
+              onTransactionConfirmed={async()=>alert("CONFIRMED")}>
+                CLAIM NFT
+              </TransactionButton>
               <Button
                 size="lg"
                 variant="outline"
